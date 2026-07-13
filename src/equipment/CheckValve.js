@@ -4,8 +4,8 @@
  */
 
 import * as THREE from 'three';
-import { MaterialFactory } from '@material/MaterialFactory.js';
-import { Flange } from '@pipeline/Flange.js';
+import { MaterialFactory } from '../material/MaterialFactory.js';
+import { Flange } from '../pipeline/Flange.js';
 
 export class CheckValve {
     constructor(world, options = {}) {
@@ -92,6 +92,5 @@ export class CheckValve {
     }
 
     update() {
-        // 止回阀内部拍板微动物理模拟
     }
 }
