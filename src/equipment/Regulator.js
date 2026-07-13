@@ -4,8 +4,8 @@
  */
 
 import * as THREE from 'three';
-import { MaterialFactory } from '@material/MaterialFactory.js';
-import { Flange } from '@pipeline/Flange.js';
+import { MaterialFactory } from '../material/MaterialFactory.js';
+import { Flange } from '../pipeline/Flange.js';
 
 export class Regulator {
     constructor(world, options = {}) {
@@ -36,8 +36,7 @@ export class Regulator {
         const metalMat = MaterialFactory.getMaterial('flange_silver');
 
         // 1. 调压阀阀体 (Valve Body)
-        const bodyGeom = new THREE.CylinderGeometry(bodyRadius, bodyRadius, bodyLength, 16);
-        const bodyMesh = new THREE.Mesh(bodyGeom, bodyMat);
+        const bodyMesh = new THREE.Mesh(new THREE.CylinderGeometry(bodyRadius, bodyRadius, bodyLength, 16), bodyMat);
         bodyMesh.rotation.z = Math.PI / 2; // 水平介质流
         bodyMesh.castShadow = true;
         bodyMesh.receiveShadow = true;
@@ -58,46 +57,40 @@ export class Regulator {
 
         // 3. 下部阀执行杆 (Lower Stem)
         const stemHeight = bodyRadius * 1.5;
-        const stemGeom = new THREE.CylinderGeometry(0.015, 0.015, stemHeight, 8);
-        const stemMesh = new THREE.Mesh(stemGeom, metalMat);
+        const stemMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, stemHeight, 8), metalMat);
         stemMesh.position.y = bodyRadius + stemHeight / 2;
         stemMesh.castShadow = true;
         this.group.add(stemMesh);
 
-        // 4. 大型气动薄膜执行机构（膜头 / Actuator Chamber）- 燃气调压站最醒目的飞碟状结构
+        // 4. 大型气动薄膜执行机构（膜头）
         const diaphragmRadius = bodyRadius * 2.8;
         const diaphragmHeight = bodyRadius * 0.9;
-        
-        const actuatorGeom = new THREE.CylinderGeometry(diaphragmRadius, diaphragmRadius, diaphragmHeight, 24);
-        const actuatorMesh = new THREE.Mesh(actuatorGeom, bodyMat);
+        const actuatorMesh = new THREE.Mesh(new THREE.CylinderGeometry(diaphragmRadius, diaphragmRadius, diaphragmHeight, 24), bodyMat);
         actuatorMesh.position.y = bodyRadius + stemHeight + diaphragmHeight / 2;
         actuatorMesh.castShadow = true;
         this.group.add(actuatorMesh);
 
         // 5. 膜头中部夹紧加强圆法兰边
-        const ringGeom = new THREE.CylinderGeometry(diaphragmRadius * 1.05, diaphragmRadius * 1.05, 0.04, 24);
-        const ringMesh = new THREE.Mesh(ringGeom, metalMat);
+        const ringMesh = new THREE.Mesh(new THREE.CylinderGeometry(diaphragmRadius * 1.05, diaphragmRadius * 1.05, 0.04, 24), metalMat);
         ringMesh.position.y = bodyRadius + stemHeight + diaphragmHeight / 2;
         this.group.add(ringMesh);
 
         // 6. 顶部负载调节弹簧罩筒 (Spring Cap)
         const capHeight = stemHeight * 1.2;
-        const capGeom = new THREE.CylinderGeometry(diaphragmRadius * 0.25, diaphragmRadius * 0.3, capHeight, 12);
-        const capMesh = new THREE.Mesh(capGeom, metalMat);
+        const capMesh = new THREE.Mesh(new THREE.CylinderGeometry(diaphragmRadius * 0.25, diaphragmRadius * 0.3, capHeight, 12), metalMat);
         capMesh.position.y = bodyRadius + stemHeight + diaphragmHeight + capHeight / 2;
         capMesh.castShadow = true;
         this.group.add(capMesh);
 
-        // 7. 反馈导压细管路 (Feedback Sensing Line) - 连通阀后管道与膜头
+        // 7. 反馈导压细管路 (Feedback Sensing Line)
         const path = new THREE.CatmullRomCurve3([
-            new THREE.Vector3(bodyLength * 0.6, 0, 0),                       // 阀后侧壁起
+            new THREE.Vector3(bodyLength * 0.6, 0, 0),
             new THREE.Vector3(bodyLength * 0.6, -pipeRadius * 1.8, 0),
             new THREE.Vector3(0, -pipeRadius * 1.8, diaphragmRadius * 0.8),
             new THREE.Vector3(0, bodyRadius + stemHeight, diaphragmRadius * 0.8),
-            new THREE.Vector3(0, bodyRadius + stemHeight, 0)                 // 接回执行膜头
+            new THREE.Vector3(0, bodyRadius + stemHeight, 0)
         ]);
-        const tubeGeom = new THREE.TubeGeometry(path, 20, 0.008, 8, false);
-        const tubeMesh = new THREE.Mesh(tubeGeom, metalMat);
+        const tubeMesh = new THREE.Mesh(new THREE.TubeGeometry(path, 20, 0.008, 8, false), metalMat);
         this.group.add(tubeMesh);
 
         // 位置姿态设置
@@ -107,17 +100,11 @@ export class Regulator {
         this.scene.add(this.group);
     }
 
-    /**
-     * 孪生更新：更新阀前、阀后实时调压数据
-     * @param {number} inlet 
-     * @param {number} outlet 
-     */
     setValue(inlet, outlet) {
         this.inletPressure = inlet;
         this.outletPressure = outlet;
     }
 
     update() {
-        // 用于动态微振幅膜片物理弹性特效动画
     }
 }
