@@ -4,8 +4,8 @@
  */
 
 import * as THREE from 'three';
-import { MaterialFactory } from '@material/MaterialFactory.js';
-import { Flange } from '@pipeline/Flange.js';
+import { MaterialFactory } from '../material/MaterialFactory.js';
+import { Flange } from '../pipeline/Flange.js';
 
 export class Filter {
     constructor(world, options = {}) {
