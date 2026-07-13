@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 工业数字孪生天然气站场系统</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #030a16;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #ffffff;
+        }
+        #app {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+        /* HUD UI Overlay */
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .hud-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background: linear-gradient(to bottom, rgba(3,15,36,0.9) 0%, rgba(3,15,36,0) 100%);
+            border-bottom: 1px solid rgba(0,255,204,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+        }
+        .hud-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ffcc;
+            text-shadow: 0 0 10px rgba(0,255,204,0.5);
+            letter-spacing: 2px;
+        }
+        .hud-title span {
+            font-size: 14px;
+            color: #8fa0c0;
+            margin-left: 15px;
+            letter-spacing: 0;
+        }
+        .hud-stats {
+            display: flex;
+            gap: 20px;
+        }
+        .stat-box {
+            background: rgba(3,25,50,0.6);
+            border: 1px solid rgba(0,255,204,0.3);
+            padding: 8px 15px;
+            border-radius: 4px;
+            text-align: right;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #8fa0c0;
+            margin-bottom: 2px;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #00ff66;
+        }
+        /* Right Side Details Panel */
+        .hud-panel-right {
+            position: absolute;
+            right: 20px;
+            top: 100px;
+            width: 320px;
+            background: rgba(3,15,36,0.85);
+            border: 1px solid rgba(0,255,204,0.3);
+            border-radius: 6px;
+            box-shadow: 0 0 20px rgba(0,255,204,0.1);
+            pointer-events: auto;
+            padding: 20px;
+        }
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #00ffcc;
+            border-bottom: 1px solid rgba(0,255,204,0.3);
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .prop-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+        .prop-row strong {
+            color: #8fa0c0;
+        }
+        .text-green { color: #00ff66; }
+        .text-orange { color: #ffaa00; }
+        .text-blue { color: #00ccff; }
+
+        /* Left Side Scada Dashboard Overlay */
+        .hud-panel-left {
+            position: absolute;
+            left: 20px;
+            top: 100px;
+            width: 300px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .scada-card {
+            background: rgba(3,15,36,0.8);
+            border: 1px solid rgba(0,255,204,0.2);
+            border-radius: 6px;
+            padding: 15px;
+        }
+        .scada-card-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #00ffcc;
+            margin-bottom: 10px;
+        }
+
+        /* Twin labels rendered in CSS2D */
+        .twin-label {
+            background: rgba(3,15,36,0.9);
+            border: 1px solid #ffaa00;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .twin-label-meter {
+            background: rgba(3,15,36,0.9);
+            border: 1px solid #00ff66;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .twin-label-regulator {
+            background: rgba(3,15,36,0.9);
+            border: 1px solid #00ccff;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <!-- App Container -->
+    <div id="app">
+        <div id="canvas-container"></div>
+    </div>
+
+    <!-- HUD Overlay -->
+    <div id="ui-overlay">
+        <!-- Header -->
+        <header class="hud-header">
+            <div class="hud-title">
+                成都分输站数字孪生系统<span>Chengdu Gate Station WebTwin v1.0</span>
+            </div>
+            <div class="hud-stats">
+                <div class="stat-box">
+                    <div class="stat-label">站场瞬时总气量</div>
+                    <div class="stat-value" id="total-station-flow">243,000 Nm³/h</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">系统运行状态</div>
+                    <div class="stat-value" style="color: #00ffcc;">TELEMETRY LINKED</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Left Dashboard -->
+        <div class="hud-panel-left">
+            <div class="scada-card" id="panel-Meter_01">
+                <div class="scada-card-title">计量一路 (Meter_01)</div>
+                <div class="prop-row">
+                    <strong>瞬时流量:</strong>
+                    <span class="stat-val text-green"><span class="flow-val">125,000</span> Nm³/h</span>
+                </div>
+                <div class="prop-row">
+                    <strong>累计气量:</strong>
+                    <span class="stat-val text-green"><span class="total-val">10,485,760</span> m³</span>
+                </div>
+            </div>
+            <div class="scada-card" id="panel-Meter_02">
+                <div class="scada-card-title">计量二路 (Meter_02)</div>
+                <div class="prop-row">
+                    <strong>瞬时流量:</strong>
+                    <span class="stat-val text-green"><span class="flow-val">118,000</span> Nm³/h</span>
+                </div>
+                <div class="prop-row">
+                    <strong>累计气量:</strong>
+                    <span class="stat-val text-green"><span class="total-val">9,852,000</span> m³</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side Panel -->
+        <div class="hud-panel-right">
+            <div class="panel-title">孪生设备遥测数据卡片</div>
+            <div id="details-content">
+                <div style="color: #8fa0c0; text-align: center; padding: 20px 0; font-size: 13px;">
+                    点击场景中的阀门、表计或生产设备，获取 SCADA 物理联动遥测卡片。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Map & Main Entry -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/three.module.js",
+          "three/addons/": "./vendor/three/addons/"
+        }
+      }
+    </script>
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
