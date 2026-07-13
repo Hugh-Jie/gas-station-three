@@ -4,8 +4,8 @@
  */
 
 import * as THREE from 'three';
-import { MaterialFactory } from '@material/MaterialFactory.js';
-import { Flange } from '@pipeline/Flange.js';
+import { MaterialFactory } from '../material/MaterialFactory.js';
+import { Flange } from '../pipeline/Flange.js';
 
 export class ButterflyValve {
     constructor(world, options = {}) {
@@ -37,7 +37,7 @@ export class ButterflyValve {
         const metalMat = MaterialFactory.getMaterial('flange_silver');
 
         // 1. 超薄环状阀体 (Thin Ring Body)
-        const bodyGeom = new THREE.CylinderGeometry(bodyRadius, bodyRadius, bodyThickness, PIPELINE.SEGMENTS);
+        const bodyGeom = new THREE.CylinderGeometry(bodyRadius, bodyRadius, bodyThickness, 32);
         const bodyMesh = new THREE.Mesh(bodyGeom, valveMat);
         bodyMesh.rotation.z = Math.PI / 2; // 水平介质流向
         bodyMesh.castShadow = true;
@@ -57,7 +57,7 @@ export class ButterflyValve {
         });
 
         // 3. 旋转蝶板 (Rotating Disc) - 阀体内部的核心圆形隔绝板
-        const discGeom = new THREE.CylinderGeometry(pipeRadius * 0.95, pipeRadius * 0.95, 0.02, PIPELINE.SEGMENTS);
+        const discGeom = new THREE.CylinderGeometry(pipeRadius * 0.95, pipeRadius * 0.95, 0.02, 32);
         this.discMesh = new THREE.Mesh(discGeom, metalMat);
         this.discMesh.castShadow = true;
 
@@ -109,6 +109,5 @@ export class ButterflyValve {
     }
 
     update() {
-        // 用于数据更新
     }
 }
