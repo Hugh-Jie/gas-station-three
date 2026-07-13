@@ -1,129 +1,163 @@
 /**
  * @file SceneManager.js
- * @description 数字化场站建站管理器，自适应读取 station.json 配置，循环实例化各类型工业设备（BallValve、Filter、Separator等），并调用 PipelineManager 自动拉设自适应工艺管网
+ * @description 数字孪生站场场景管理器。负责解析 JSON (station.json) 场站配置文件，实现全站设备的动态自适应加载、管线高保真自动化连接与对齐、地面与建筑地物整体初始化排布
  */
 
 import * as THREE from 'three';
-import { BallValve } from '@world/../equipment/BallValve.js';
-import { GateValve } from '@world/../equipment/GateValve.js';
-import { CheckValve } from '@world/../equipment/CheckValve.js';
-import { ButterflyValve } from '@world/../equipment/ButterflyValve.js';
-import { Filter } from '@world/../equipment/Filter.js';
-import { Regulator } from '@world/../equipment/Regulator.js';
-import { FlowMeter } from '@world/../equipment/FlowMeter.js';
-import { Separator } from '@world/../equipment/Separator.js';
-import { Compressor } from '@world/../equipment/Compressor.js';
-import { Pump } from '@world/../equipment/Pump.js';
-import { VentPipe } from '@world/../equipment/VentPipe.js';
-import { ControlCabinet } from '@world/../equipment/ControlCabinet.js';
-import { Platform } from '@world/../equipment/Platform.js';
-import { PipelineManager } from './PipelineManager.js';
+import { World } from '../world/World.js';
+
+// 动态载入 Pipeline 与 Equipment 库以供 JSON 实例化使用
+import { Pipe } from '../pipeline/Pipe.js';
+import { Elbow } from '../pipeline/Elbow.js';
+import { Tee } from '../pipeline/Tee.js';
+import { Cross } from '../pipeline/Cross.js';
+import { Reducer } from '../pipeline/Reducer.js';
+import { Flange } from '../pipeline/Flange.js';
+import { Base } from '../pipeline/Base.js';
+import { Drain } from '../pipeline/Drain.js';
+import { Vent } from '../pipeline/Vent.js';
+
+import { BallValve } from '../equipment/BallValve.js';
+import { GateValve } from '../equipment/GateValve.js';
+import { CheckValve } from '../equipment/CheckValve.js';
+import { ButterflyValve } from '../equipment/ButterflyValve.js';
+import { Filter } from '../equipment/Filter.js';
+import { Regulator } from '../equipment/Regulator.js';
+import { FlowMeter } from '../equipment/FlowMeter.js';
+import { PressureGauge } from '../equipment/PressureGauge.js';
+import { TemperatureGauge } from '../equipment/TemperatureGauge.js';
+import { Separator } from '../equipment/Separator.js';
+import { Compressor } from '../equipment/Compressor.js';
+import { Pump } from '../equipment/Pump.js';
+import { VentPipe } from '../equipment/VentPipe.js';
+import { ControlCabinet } from '../equipment/ControlCabinet.js';
+import { Platform } from '../equipment/Platform.js';
+import { SteelSupport } from '../equipment/SteelSupport.js';
 
 export class SceneManager {
     constructor(world) {
         this.world = world;
         this.scene = world.engine.getScene();
-        this.pipelineManager = new PipelineManager(world);
-        
-        this.equipmentsMap = new Map(); // 存储已生成的设备实例，供管线连通查询
+
+        // 注册实例化映射表
+        this.classRegistry = {
+            // 管路组件
+            Pipe, Elbow, Tee, Cross, Reducer, Flange, Base, Drain, Vent,
+            // 生产与辅助设备
+            BallValve, GateValve, CheckValve, ButterflyValve, Filter, Regulator,
+            FlowMeter, PressureGauge, TemperatureGauge, Separator, Compressor,
+            Pump, VentPipe, ControlCabinet, Platform, SteelSupport
+        };
+
+        this.equipments = [];
+        this.pipelines = [];
     }
 
     /**
-     * 读取 station.json 全景数据并全自动生成三维物理数字孪生场站
-     * @param {Object} stationData json 配置对象
+     * 异步加载并解析站场配置文件进行场景动态重构
+     * @param {string} url JSON配置文件URL路径
      */
-    buildStation(stationData) {
-        if (!stationData) return;
+    async loadStation(url) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Failed to load station config: ${response.statusText}`);
+            const config = await response.json();
+            
+            this.buildStation(config);
+        } catch (error) {
+            console.error('Error rendering station layout:', error);
+        }
+    }
 
-        // 1. 程序化循环装配所有离散工业设备
-        if (stationData.equipments) {
-            stationData.equipments.forEach(eq => {
-                const pos = new THREE.Vector3(eq.position[0], eq.position[1], eq.position[2]);
-                const rot = new THREE.Euler(eq.rotation[0], eq.rotation[1], eq.rotation[2]);
-                
-                let instance = null;
-                const options = {
-                    id: eq.id,
-                    position: pos,
-                    rotation: rot,
-                    dn: eq.dn || 300,
-                    ...eq.properties
-                };
+    /**
+     * 解析配置数据并实例化对象
+     * @param {Object} data 
+     */
+    buildStation(data) {
+        console.log(`[SceneManager] Start building digital twin station: ${data.stationName || 'Default Station'}`);
 
-                switch (eq.type) {
-                    case 'BallValve':
-                        instance = new BallValve(this.world, options);
-                        break;
-                    case 'GateValve':
-                        instance = new GateValve(this.world, options);
-                        break;
-                    case 'CheckValve':
-                        instance = new CheckValve(this.world, options);
-                        break;
-                    case 'ButterflyValve':
-                        instance = new ButterflyValve(this.world, options);
-                        break;
-                    case 'Filter':
-                        instance = new Filter(this.world, options);
-                        break;
-                    case 'Regulator':
-                        instance = new Regulator(this.world, options);
-                        break;
-                    case 'FlowMeter':
-                        instance = new FlowMeter(this.world, options);
-                        break;
-                    case 'Separator':
-                        instance = new Separator(this.world, options);
-                        break;
-                    case 'Compressor':
-                        instance = new Compressor(this.world, options);
-                        break;
-                    case 'Pump':
-                        instance = new Pump(this.world, options);
-                        break;
-                    case 'VentPipe':
-                        instance = new VentPipe(this.world, options);
-                        break;
-                    case 'ControlCabinet':
-                        instance = new ControlCabinet(this.world, options);
-                        break;
-                    case 'Platform':
-                        instance = new Platform(this.world, {
-                            position: pos,
-                            rotation: rot,
-                            width: eq.width,
-                            length: eq.length,
-                            height: eq.height
-                        });
-                        break;
-                    default:
-                        console.warn(`未知的设备类型: ${eq.type}`);
-                }
-
-                if (instance) {
-                    this.equipmentsMap.set(eq.id, instance);
-                }
-            });
+        // 1. 初始化场景环境基底地物 (地面、道路、建筑围栏、路灯)
+        if (data.environment) {
+            this.world.initEnvironment(data.environment);
         }
 
-        // 2. 循环建立数据驱动的自适应工艺连通管网
-        if (stationData.pipelines) {
-            stationData.pipelines.forEach(line => {
-                const fromEq = this.equipmentsMap.get(line.from);
-                const toEq = this.equipmentsMap.get(line.to);
-
-                if (fromEq && toEq) {
-                    // 获取两端设备在场景中的三维网格组进行连接
-                    const fromMesh = fromEq.group || fromEq.mesh;
-                    const toMesh = toEq.group || toEq.mesh;
-                    
-                    if (fromMesh && toMesh) {
-                        this.pipelineManager.connect(fromMesh, toMesh, line.dn);
-                    }
+        // 2. 参数化构建各工艺流程设备组件
+        if (data.equipments && Array.isArray(data.equipments)) {
+            data.equipments.forEach(eqConfig => {
+                const ClassRef = this.classRegistry[eqConfig.type];
+                if (ClassRef) {
+                    const options = this._parseOptions(eqConfig);
+                    const instance = new ClassRef(this.world, options);
+                    this.equipments.push(instance);
                 } else {
-                    console.error(`无法连接管线，找不到起点或终点设备: ${line.from} -> ${line.to}`);
+                    console.warn(`[SceneManager] Unregistered class type: ${eqConfig.type}`);
                 }
             });
         }
+
+        // 3. 自动化连接及自适应拟合工艺管道 network
+        if (data.pipelines && Array.isArray(data.pipelines)) {
+            data.pipelines.forEach(pipeConfig => {
+                const ClassRef = this.classRegistry[pipeConfig.type || 'Pipe'];
+                if (ClassRef) {
+                    const options = this._parseOptions(pipeConfig);
+                    const instance = new ClassRef(this.world, options);
+                    this.pipelines.push(instance);
+                }
+            });
+        }
+
+        console.log(`[SceneManager] Construction complete! Loaded ${this.equipments.length} equipments and ${this.pipelines.length} pipeline networks.`);
+    }
+
+    /**
+     * 配置项转换：将 JSON 中的平直数组坐标 [x, y, z] 转换为 Three.js 的 Vector3/Euler 实例
+     * @private
+     */
+    _parseOptions(config) {
+        const options = { ...config.options };
+
+        if (options.position && Array.isArray(options.position)) {
+            options.position = new THREE.Vector3(...options.position);
+        }
+        if (options.rotation && Array.isArray(options.rotation)) {
+            options.rotation = new THREE.Euler(
+                THREE.MathUtils.degToRad(options.rotation[0]),
+                THREE.MathUtils.degToRad(options.rotation[1]),
+                THREE.MathUtils.degToRad(options.rotation[2])
+            );
+        }
+        if (options.start && Array.isArray(options.start)) {
+            options.start = new THREE.Vector3(...options.start);
+        }
+        if (options.end && Array.isArray(options.end)) {
+            options.end = new THREE.Vector3(...options.end);
+        }
+        if (options.direction && Array.isArray(options.direction)) {
+            options.direction = new THREE.Vector3(...options.direction);
+        }
+
+        options.id = config.id;
+        return options;
+    }
+
+    /**
+     * 孪生联动：通过设备 ID 获取孪生对象，实时动态修改其工况工艺参数（如压力、温度、流量计数字）
+     * @param {string} id 设备ID
+     * @returns {Object|null}
+     */
+    getEquipmentById(id) {
+        return this.equipments.find(eq => eq.id === id) || null;
+    }
+
+    /**
+     * 周期更新：执行孪生设备的动态动画逻辑（如气流粒子、仪表指针微颤、累计流量累加等）
+     */
+    update() {
+        this.equipments.forEach(eq => {
+            if (typeof eq.update === 'function') {
+                eq.update();
+            }
+        });
     }
 }
