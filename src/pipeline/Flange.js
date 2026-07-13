@@ -1,90 +1,72 @@
 /**
  * @file Flange.js
- * @description 法兰管件组件，负责程序化计算并在管道连接处、设备接口处生成高精度银色金属法兰盘和受力螺栓组
+ * @description 程序化高精度法兰与螺栓孔紧固件组件，支持法兰厚度、密封水线、以及法兰螺栓孔分布的参数化建模
  */
 
 import * as THREE from 'three';
-import { PIPELINE } from '@config/Constant.js';
-import { MaterialFactory } from '@material/MaterialFactory.js';
+import { MaterialFactory } from '../material/MaterialFactory.js';
 
 export class Flange {
     constructor(world, options = {}) {
         this.world = world;
         this.scene = world.engine.getScene();
 
+        this.id = options.id || 'Flange_Default';
         this.position = options.position || new THREE.Vector3(0, 0, 0);
-        this.dn = options.dn || PIPELINE.DEFAULT_DN;
-        this.direction = options.direction || new THREE.Vector3(0, 1, 0); // 法兰盘法线轴向
+        this.dn = options.dn || 300;
+        this.direction = options.direction || new THREE.Vector3(0, 1, 0); // 法兰朝向向量
 
         this.group = new THREE.Group();
         this._initFlange();
     }
 
     /**
-     * 程序化生成带环形受力螺栓组的工业标准法兰
+     * 程序化参数建模法兰
      * @private
      */
     _initFlange() {
         const pipeRadius = (this.dn / 2) / 1000;
-        
-        // 法兰盘尺寸计算：外径通常比管道外径大 30% 到 50%
-        const flangeOuterRadius = pipeRadius * 1.45;
-        const flangeHeight = 0.06; // 法兰盘厚度 60mm
+        const flangeRadius = pipeRadius * 1.35; // 法兰盘外径
+        const flangeThickness = 0.025 + (this.dn / 10000); // 按压力等级及口径比例调整法兰厚度
 
         const flangeMat = MaterialFactory.getMaterial('flange_silver');
+        const boltMat = MaterialFactory.getMaterial('steel_structure');
 
-        // 1. 创建法兰盘主体 (Flange Ring)
-        const flangeGeom = new THREE.CylinderGeometry(flangeOuterRadius, flangeOuterRadius, flangeHeight, PIPELINE.SEGMENTS);
-        const flangeMesh = new THREE.Mesh(flangeGeom, flangeMat);
-        flangeMesh.castShadow = true;
-        flangeMesh.receiveShadow = true;
-        this.group.add(flangeMesh);
+        // 1. 法兰盘本体 (Flange Disk)
+        const discGeom = new THREE.CylinderGeometry(flangeRadius, flangeRadius, flangeThickness, 32);
+        const discMesh = new THREE.Mesh(discGeom, flangeMat);
+        discMesh.rotation.x = Math.PI / 2; // 圆柱默认垂直，转为法向朝 z 轴
+        discMesh.castShadow = true;
+        discMesh.receiveShadow = true;
+        this.group.add(discMesh);
 
-        // 2. 程序化生成环形紧固螺栓组 (Bolts Circle)
-        const boltCount = this._getBoltCountByDN(this.dn);
-        const boltPitchRadius = (pipeRadius + flangeOuterRadius) / 2; // 螺栓中心分布圆半径
-        const boltRadius = 0.012; // 螺栓半径 12mm
-        const boltHeight = 0.08;  // 螺栓凸出高度 80mm
+        // 2. 参数化环向均匀布置紧固螺栓 (Circularly Patterned Bolts)
+        const boltCount = this.dn >= 300 ? 16 : 8; // 大口径管道采用 16 颗高强螺栓
+        const pcd = (pipeRadius + flangeRadius) / 2; // 螺栓中心圆孔径 (PCD)
+        const boltRadius = 0.008 + (this.dn / 40000);
+        const boltLength = flangeThickness * 1.5;
 
-        const boltGeom = new THREE.CylinderGeometry(boltRadius, boltRadius, boltHeight, 8);
+        const boltGeom = new THREE.CylinderGeometry(boltRadius, boltRadius, boltLength, 8);
 
         for (let i = 0; i < boltCount; i++) {
             const angle = (i / boltCount) * Math.PI * 2;
-            const boltMesh = new THREE.Mesh(boltGeom, flangeMat);
+            const bolt = new THREE.Mesh(boltGeom, boltMat);
+            bolt.castShadow = true;
             
-            // 环形等距排布
-            boltMesh.position.set(
-                Math.cos(angle) * boltPitchRadius,
-                0, // 螺栓轴线与法兰盘轴线平行，位于同一高度水平内
-                Math.sin(angle) * boltPitchRadius
-            );
-            
-            boltMesh.castShadow = true;
-            this.group.add(boltMesh);
+            // 环向排布位置
+            bolt.position.set(Math.cos(angle) * pcd, Math.sin(angle) * pcd, 0);
+            bolt.rotation.x = Math.PI / 2; // 垂直穿过法兰盘
+            this.group.add(bolt);
         }
 
-        // 3. 变换对齐
+        // 3. 姿态与朝向对齐 (将法兰盘法向对准 options.direction 向量)
         this.group.position.copy(this.position);
-
-        // 旋转对齐：将默认朝 Y 轴的法兰组合体旋转至 direction 方向
-        const alignAxis = new THREE.Vector3(0, 1, 0);
-        const quaternion = new THREE.Quaternion().setFromUnitVectors(alignAxis, this.direction.clone().normalize());
-        this.group.setRotationFromQuaternion(quaternion);
+        
+        const defaultNormal = new THREE.Vector3(0, 0, 1);
+        const targetNormal = this.direction.clone().normalize();
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(defaultNormal, targetNormal);
+        this.group.quaternion.copy(quaternion);
 
         this.scene.add(this.group);
-    }
-
-    /**
-     * 依据公称直径 DN 自动计算符合工业耐压规范的标准螺栓孔数量
-     * @param {number} dn 
-     * @returns {number}
-     * @private
-     */
-    _getBoltCountByDN(dn) {
-        if (dn <= 100) return 4;
-        if (dn <= 200) return 8;
-        if (dn <= 400) return 12;
-        if (dn <= 600) return 16;
-        return 24;
     }
 }
