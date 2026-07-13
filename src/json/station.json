@@ -1,0 +1,176 @@
+/**
+ * @file station.json
+ * @description 数字化天然气场站设备、管线全景元数据配置文件，由程序自适应读取并生成整个 3D 数字孪生物理场景
+ */
+
+{
+  "stationName": "Chengdu_Gas_Station",
+  "equipments": [
+    {
+      "id": "Filter_01",
+      "type": "Filter",
+      "position": [-30, 0, 10],
+      "rotation": [0, 0, 0],
+      "dn": 300,
+      "properties": {
+        "dpValue": 15.2,
+        "status": "normal"
+      }
+    },
+    {
+      "id": "Filter_02",
+      "type": "Filter",
+      "position": [-30, 0, 30],
+      "rotation": [0, 0, 0],
+      "dn": 300,
+      "properties": {
+        "dpValue": 12.1,
+        "status": "normal"
+      }
+    },
+    {
+      "id": "Valve_Inlet_01",
+      "type": "BallValve",
+      "position": [-45, 0.8, 10],
+      "rotation": [0, 1.570796, 0],
+      "dn": 300,
+      "properties": {
+        "status": "open"
+      }
+    },
+    {
+      "id": "Valve_Inlet_02",
+      "type": "BallValve",
+      "position": [-45, 0.8, 30],
+      "rotation": [0, 1.570796, 0],
+      "dn": 300,
+      "properties": {
+        "status": "open"
+      }
+    },
+    {
+      "id": "Meter_01",
+      "type": "FlowMeter",
+      "position": [0, 0.8, 10],
+      "rotation": [0, 1.570796, 0],
+      "dn": 300,
+      "properties": {
+        "flowValue": 125000,
+        "totalValue": 10485760
+      }
+    },
+    {
+      "id": "Meter_02",
+      "type": "FlowMeter",
+      "position": [0, 0.8, 30],
+      "rotation": [0, 1.570796, 0],
+      "dn": 300,
+      "properties": {
+        "flowValue": 118000,
+        "totalValue": 9852000
+      }
+    },
+    {
+      "id": "Regulator_01",
+      "type": "Regulator",
+      "position": [30, 0.8, 10],
+      "rotation": [0, 1.570796, 0],
+      "dn": 200,
+      "properties": {
+        "inletPressure": 4.2,
+        "outletPressure": 0.4
+      }
+    },
+    {
+      "id": "Regulator_02",
+      "type": "Regulator",
+      "position": [30, 0.8, 30],
+      "rotation": [0, 1.570796, 0],
+      "dn": 200,
+      "properties": {
+        "inletPressure": 4.1,
+        "outletPressure": 0.4
+      }
+    },
+    {
+      "id": "Valve_Outlet_01",
+      "type": "GateValve",
+      "position": [45, 0.8, 10],
+      "rotation": [0, 1.570796, 0],
+      "dn": 200,
+      "properties": {
+        "status": "open"
+      }
+    },
+    {
+      "id": "Valve_Outlet_02",
+      "type": "GateValve",
+      "position": [45, 0.8, 30],
+      "rotation": [0, 1.570796, 0],
+      "dn": 200,
+      "properties": {
+        "status": "open"
+      }
+    },
+    {
+      "id": "ESD_Cabinet",
+      "type": "ControlCabinet",
+      "position": [-5, 0, -10],
+      "rotation": [0, 0, 0],
+      "properties": {
+        "status": "normal"
+      }
+    },
+    {
+      "id": "Support_Platform",
+      "type": "Platform",
+      "position": [0, 0, 20],
+      "rotation": [0, 0, 0],
+      "width": 4.0,
+      "length": 30.0,
+      "height": 1.2
+    }
+  ],
+  "pipelines": [
+    {
+      "from": "Valve_Inlet_01",
+      "to": "Filter_01",
+      "dn": 300
+    },
+    {
+      "from": "Valve_Inlet_02",
+      "to": "Filter_02",
+      "dn": 300
+    },
+    {
+      "from": "Filter_01",
+      "to": "Meter_01",
+      "dn": 300
+    },
+    {
+      "from": "Filter_02",
+      "to": "Meter_02",
+      "dn": 300
+    },
+    {
+      "from": "Meter_01",
+      "to": "Regulator_01",
+      "dn": 300
+    },
+    {
+      "from": "Meter_02",
+      "to": "Regulator_02",
+      "dn": 300
+    },
+    {
+      "from": "Regulator_01",
+      "to": "Valve_Outlet_01",
+      "dn": 200
+    },
+    {
+      "from": "Regulator_02",
+      "to": "Valve_Outlet_02",
+      "dn": 200
+    }
+  ]
+}
