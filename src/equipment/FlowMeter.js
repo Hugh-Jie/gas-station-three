@@ -4,8 +4,8 @@
  */
 
 import * as THREE from 'three';
-import { MaterialFactory } from '@material/MaterialFactory.js';
-import { Flange } from '@pipeline/Flange.js';
+import { MaterialFactory } from '../material/MaterialFactory.js';
+import { Flange } from '../pipeline/Flange.js';
 
 export class FlowMeter {
     constructor(world, options = {}) {
@@ -117,6 +117,5 @@ export class FlowMeter {
     }
 
     update() {
-        // 用于屏幕状态微动闪烁、累计脉冲闪烁
     }
 }
