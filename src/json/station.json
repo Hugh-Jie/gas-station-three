@@ -133,44 +133,84 @@
   ],
   "pipelines": [
     {
-      "from": "Valve_Inlet_01",
-      "to": "Filter_01",
-      "dn": 300
+      "id": "Pipe_01",
+      "type": "Pipe",
+      "options": {
+        "start": [-45, 0.8, 10],
+        "end": [-30, 0.8, 10],
+        "dn": 300,
+        "medium": "gas"
+      }
     },
     {
-      "from": "Valve_Inlet_02",
-      "to": "Filter_02",
-      "dn": 300
+      "id": "Pipe_02",
+      "type": "Pipe",
+      "options": {
+        "start": [-45, 0.8, 30],
+        "end": [-30, 0.8, 30],
+        "dn": 300,
+        "medium": "gas"
+      }
     },
     {
-      "from": "Filter_01",
-      "to": "Meter_01",
-      "dn": 300
+      "id": "Pipe_03",
+      "type": "Pipe",
+      "options": {
+        "start": [-30, 0.8, 10],
+        "end": [0, 0.8, 10],
+        "dn": 300,
+        "medium": "gas"
+      }
     },
     {
-      "from": "Filter_02",
-      "to": "Meter_02",
-      "dn": 300
+      "id": "Pipe_04",
+      "type": "Pipe",
+      "options": {
+        "start": [-30, 0.8, 30],
+        "end": [0, 0.8, 30],
+        "dn": 300,
+        "medium": "gas"
+      }
     },
     {
-      "from": "Meter_01",
-      "to": "Regulator_01",
-      "dn": 300
+      "id": "Pipe_05",
+      "type": "Pipe",
+      "options": {
+        "start": [0, 0.8, 10],
+        "end": [30, 0.8, 10],
+        "dn": 300,
+        "medium": "gas"
+      }
     },
     {
-      "from": "Meter_02",
-      "to": "Regulator_02",
-      "dn": 300
+      "id": "Pipe_06",
+      "type": "Pipe",
+      "options": {
+        "start": [0, 0.8, 30],
+        "end": [30, 0.8, 30],
+        "dn": 300,
+        "medium": "gas"
+      }
     },
     {
-      "from": "Regulator_01",
-      "to": "Valve_Outlet_01",
-      "dn": 200
+      "id": "Pipe_07",
+      "type": "Pipe",
+      "options": {
+        "start": [30, 0.8, 10],
+        "end": [45, 0.8, 10],
+        "dn": 200,
+        "medium": "gas"
+      }
     },
     {
-      "from": "Regulator_02",
-      "to": "Valve_Outlet_02",
-      "dn": 200
+      "id": "Pipe_08",
+      "type": "Pipe",
+      "options": {
+        "start": [30, 0.8, 30],
+        "end": [45, 0.8, 30],
+        "dn": 200,
+        "medium": "gas"
+      }
     }
   ]
 }
