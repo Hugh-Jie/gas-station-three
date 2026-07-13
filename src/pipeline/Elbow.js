@@ -1,64 +1,55 @@
 /**
  * @file Elbow.js
- * @description 弯头管件组件，负责程序化计算和生成 90 度/45 度弯头，使相邻直管段在三维空间中平滑转折过渡
+ * @description 程序化 90° / 45° 弯头管道连接件，基于 TorusGeometry（圆环体）高精度生成，并自动计算法兰焊接定位面
  */
 
 import * as THREE from 'three';
-import { PIPELINE } from '@config/Constant.js';
-import { MaterialFactory } from '@material/MaterialFactory.js';
+import { MaterialFactory } from '../material/MaterialFactory.js';
 
 export class Elbow {
     constructor(world, options = {}) {
         this.world = world;
         this.scene = world.engine.getScene();
 
+        this.id = options.id || 'Elbow_Default';
         this.position = options.position || new THREE.Vector3(0, 0, 0);
-        this.dn = options.dn || PIPELINE.DEFAULT_DN;
-        this.angle = options.angle || 90; // 弯头角度，默认 90 度
-        this.radius = options.radius || ((options.dn || PIPELINE.DEFAULT_DN) * 1.5) / 1000; // 弯曲半径，默认 1.5D
+        this.rotation = options.rotation || new THREE.Euler(0, 0, 0);
+        this.dn = options.dn || 300;
+        this.angle = options.angle || 90; // 弯头角度：45 / 90 度
+        this.medium = options.medium || 'gas';
 
-        this.directionIn = options.directionIn || new THREE.Vector3(1, 0, 0);
-        this.directionOut = options.directionOut || new THREE.Vector3(0, 1, 0);
-
-        this.mesh = null;
+        this.group = new THREE.Group();
         this._initElbow();
     }
 
     /**
-     * 程序化构建圆弧弯头网格
+     * 参数化弯头建模
      * @private
      */
     _initElbow() {
-        const pipeRadius = (this.dn / 2) / 1000;
-        
-        // 使用三维圆环几何体 (TorusGeometry) 创建弯头
-        // radialSegments 对应圆管截面细分数，tubularSegments 对应圆弧长度方向细分数
-        const arc = (this.angle / 180) * Math.PI;
-        const geometry = new THREE.TorusGeometry(this.radius, pipeRadius, PIPELINE.SEGMENTS, 32, arc);
-        const material = MaterialFactory.getMaterial('pipe_yellow');
+        const r = (this.dn / 2) / 1000; // 管道半径
+        const R = r * 1.5; // 弯曲半径 (通常为 1.5D 标准弯头)
 
-        this.mesh = new THREE.Mesh(geometry, material);
+        const arcAngle = (this.angle / 180) * Math.PI;
+        // TorusGeometry参数: 圆环半径(R), 管道半径(r), 径向分段, 管侧分段, 弧度角
+        const geom = new THREE.TorusGeometry(R, r, 32, 32, arcAngle);
 
-        // 创建独立容器，实现精确的弯头对齐与旋转
-        this.group = new THREE.Group();
+        let matName = 'pipe_yellow';
+        if (this.medium === 'water') matName = 'pipe_green';
+        if (this.medium === 'drain') matName = 'steel_structure';
+        const material = MaterialFactory.getMaterial(matName);
+
+        const mesh = new THREE.Mesh(geom, material);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+
+        // Torus 默认生成在 XY 平面，且圆心位于 (0,0,0) 的右侧偏移 R 位置，需要调整中心锚点到起点。
+        mesh.position.set(-R, 0, 0); 
+        this.group.add(mesh);
+
+        // 坐标姿态设置
         this.group.position.copy(this.position);
-
-        // 默认 Torus 在 XY 平面，圆心在原点，圆弧从 0 弧度开始。
-        // 将 Torus 的起点移到原点
-        this.mesh.position.set(0, -this.radius, 0);
-        this.group.add(this.mesh);
-
-        // 根据入射、出射方向计算弯头的旋转，确保两端精准对接
-        // 此处建立从默认姿态到所需姿态的四元数变换
-        const normal = new THREE.Vector3().crossVectors(this.directionIn, this.directionOut).normalize();
-        if (normal.lengthSq() > 0.001) {
-            const up = new THREE.Vector3(0, 0, 1);
-            const q = new THREE.Quaternion().setFromUnitVectors(up, normal);
-            this.group.setRotationFromQuaternion(q);
-        }
-
-        this.mesh.castShadow = true;
-        this.mesh.receiveShadow = true;
+        this.group.rotation.copy(this.rotation);
 
         this.scene.add(this.group);
     }
